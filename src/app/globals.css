@@ -1,0 +1,129 @@
+@import 'tailwindcss';
+
+/*
+ * Perfume Campaign Studio — dark premium studio aesthetic.
+ *
+ * The interface is deliberately quiet: near-black surfaces, one warm accent, thin
+ * borders, generous whitespace. Product imagery is the only thing allowed to be
+ * loud on the page.
+ */
+
+@theme {
+  --color-ink-950: #08070a;
+  --color-ink-900: #0c0b0f;
+  --color-ink-850: #111015;
+  --color-ink-800: #17161c;
+  --color-ink-700: #221f28;
+  --color-ink-600: #302c38;
+  --color-ink-500: #4a4455;
+
+  --color-bone-50: #f6f4f1;
+  --color-bone-200: #d8d3ca;
+  --color-bone-400: #a29a8e;
+  --color-bone-600: #6f6862;
+
+  --color-gold-300: #e7c989;
+  --color-gold-400: #d3ac66;
+  --color-gold-500: #b98f45;
+
+  --color-jade-400: #6bbf8a;
+  --color-amber-warn: #d9a548;
+  --color-rose-500: #d46b6b;
+
+  /* The --font-* variables are injected by next/font in the root layout. */
+  --font-display: var(--font-cormorant), 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: var(--font-kufi), 'Noto Kufi Arabic', 'Segoe UI', sans-serif;
+
+  --radius-card: 14px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-bone-50);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--color-gold-500);
+    color: var(--color-ink-950);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-gold-400);
+    outline-offset: 2px;
+  }
+
+  /* Thin, unobtrusive scrollbars so panels do not shout. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-600) transparent;
+  }
+}
+
+@layer components {
+  .studio-card {
+    background-color: var(--color-ink-850);
+    border: 1px solid var(--color-ink-700);
+    border-radius: var(--radius-card);
+  }
+
+  .studio-label {
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-bone-400);
+  }
+
+  .studio-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
+  }
+
+  /* Checkerboard behind transparent PNGs so bottle cut-outs read correctly. */
+  .studio-alpha-grid {
+    background-image:
+      linear-gradient(45deg, #1a1920 25%, transparent 25%),
+      linear-gradient(-45deg, #1a1920 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #1a1920 75%),
+      linear-gradient(-45deg, transparent 75%, #1a1920 75%);
+    background-size: 16px 16px;
+    background-position:
+      0 0,
+      0 8px,
+      8px -8px,
+      -8px 0;
+  }
+}
+
+@keyframes studio-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.studio-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-ink-800) 25%,
+    var(--color-ink-700) 37%,
+    var(--color-ink-800) 63%
+  );
+  background-size: 200% 100%;
+  animation: studio-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-shimmer {
+    animation: none;
+  }
+}

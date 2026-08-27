@@ -1,0 +1,181 @@
+{
+  "$comment": "Seed catalog for `npm run seed`. Entries carry identity and notes, and may optionally carry a creativeDirection so an authored design is reproducible. Bottle images and bottle analysis are always produced inside the app, so nothing about the product reference is hardcoded. Seeded notes land UNAPPROVED so a human signs them off before they drive a campaign.",
+  "perfumes": [
+    {
+      "brand": "Lattafa",
+      "name": "Musamam",
+      "arabicName": "مسمم",
+      "variant": "Black Intense",
+      "fragranceFamily": "Aromatic Woody",
+      "topNotes": [
+        "Lavender",
+        "Nutmeg",
+        "Bergamot",
+        "Sage"
+      ],
+      "heartNotes": [
+        "Geranium",
+        "Cedarwood",
+        "Maple Wood"
+      ],
+      "baseNotes": [
+        "Patchouli",
+        "Tonka Bean",
+        "Amber"
+      ],
+      "mainAccords": [
+        "aromatic",
+        "woody",
+        "warm spicy",
+        "powdery"
+      ]
+    },
+    {
+      "brand": "Lattafa",
+      "name": "Khamrah",
+      "arabicName": "خمرة",
+      "variant": "Qahwa",
+      "fragranceFamily": "Amber Vanilla",
+      "topNotes": [
+        "Coffee",
+        "Cinnamon",
+        "Cardamom"
+      ],
+      "heartNotes": [
+        "Dried Fruits",
+        "Praline",
+        "Tuberose"
+      ],
+      "baseNotes": [
+        "Vanilla",
+        "Tonka Bean",
+        "Benzoin",
+        "Amber"
+      ],
+      "mainAccords": [
+        "coffee",
+        "sweet",
+        "warm spicy",
+        "vanilla"
+      ]
+    },
+    {
+      "brand": "Afnan",
+      "name": "9PM",
+      "fragranceFamily": "Amber Fougere",
+      "topNotes": [
+        "Apple",
+        "Cinnamon",
+        "Lavender"
+      ],
+      "heartNotes": [
+        "Orange Blossom",
+        "Blue Lotus"
+      ],
+      "baseNotes": [
+        "Tonka Bean",
+        "Vanilla",
+        "Amber",
+        "Patchouli"
+      ],
+      "mainAccords": [
+        "sweet",
+        "amber",
+        "warm spicy",
+        "aromatic"
+      ]
+    },
+    {
+      "brand": "Lattafa",
+      "name": "Ariz",
+      "arabicName": "أريز",
+      "fragranceFamily": "Floral Woody Musk",
+      "topNotes": [
+        "Bergamot",
+        "Saffron",
+        "Pink Pepper"
+      ],
+      "heartNotes": [
+        "Rose",
+        "Jasmine",
+        "Orange Blossom"
+      ],
+      "baseNotes": [
+        "Sandalwood",
+        "White Musk",
+        "Amber",
+        "Vanilla"
+      ],
+      "mainAccords": [
+        "floral",
+        "musky",
+        "woody",
+        "soft spicy"
+      ]
+    },
+    {
+      "brand": "Ibraq",
+      "name": "Black Diamond Incense",
+      "fragranceFamily": "Oriental Woody",
+      "topNotes": [
+        "Black Currant",
+        "Aquatic Notes",
+        "Birch"
+      ],
+      "heartNotes": [
+        "Incense",
+        "Vanilla",
+        "Sandalwood"
+      ],
+      "baseNotes": [
+        "Leather",
+        "Oud",
+        "Smoke",
+        "Amber"
+      ],
+      "mainAccords": [
+        "incense",
+        "smoky",
+        "woody",
+        "leather",
+        "aquatic"
+      ],
+      "$notesComment": "Sourced from the brand's own store page (saudi.ibraqperfumes.com) and cross-confirmed on Fragrantica. Launched 2023, unisex.",
+      "creativeDirection": {
+        "concept": "Faceted Smoke",
+        "mood": "formal, precious, smouldering",
+        "environment": "a dark polished stone gallery with a single high slit window",
+        "background": "warm graphite stone falling into deep shadow, with diamond-shaped light patterns thrown across it",
+        "surface": "honed dark grey stone with a faint cold sheen, as though just wiped",
+        "lighting": "one hard cold slit of light from the upper left that refracts through the faceted glass and throws diamond patterns across the stone, with a low warm ember glow catching the gold",
+        "colorPalette": [
+          "#0A0A0C",
+          "#1C1B1F",
+          "#4A4750",
+          "#6E5A3A",
+          "#C9A253",
+          "#E8DCC6"
+        ],
+        "heroElements": [
+          "smouldering oud chips trailing smoke",
+          "glossy blackcurrants",
+          "a curl of birch bark",
+          "a honed sandalwood block"
+        ],
+        "secondaryElements": [
+          "a fold of dark leather",
+          "a single bead of water on stone"
+        ],
+        "atmosphericEffects": [
+          "thin incense smoke",
+          "diamond-shaped refracted light"
+        ],
+        "symbolicElement": "none",
+        "composition": "bottle centred and upright on the stone, its facets catching the slit light and casting diamond patterns to the right, ingredients low and to the sides, smoke rising behind, wide dark negative space above for typography",
+        "cameraAngle": "straight-on editorial angle at label height",
+        "visualStory": "Cold light cutting through faceted glass while oud smoulders at its base"
+      },
+      "$bottleComment": "Reference sourced from the web via the Find-the-bottle flow. Smoky grey pressed glass with a diamond-lozenge facet pattern, polished gold sphere cap, champagne-gold label plate."
+    }
+  ]
+}
