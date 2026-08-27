@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Field, TextArea, TextInput } from '@/components/ui/Field';
+import { ProgressSteps } from '@/components/ui/ProgressSteps';
 import { ErrorState } from '@/components/ui/States';
+import { Toast, toast, type ToastMessage } from '@/components/ui/Toast';
 import { api, errorMessage } from '@/lib/api/client';
 import { cn } from '@/lib/utils/cn';
 import type { CreativeDirection, Perfume, ReferenceCandidate } from '@/lib/types';
@@ -61,23 +63,25 @@ interface PrepareResponse {
  */
 export function PrepareRunner() {
   const router = useRouter();
-  const [brand, setBrand] = useState('Ibraq');
-  const [name, setName] = useState('Black Diamond Incense');
+  // Empty, not pre-filled: the old defaults were a development convenience that made
+  // the first click re-prepare a perfume the library already had.
+  const [brand, setBrand] = useState('');
+  const [name, setName] = useState('');
   const [variant, setVariant] = useState('');
   const [urls, setUrls] = useState('');
   const [running, setRunning] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [result, setResult] = useState<PrepareResponse | undefined>();
   const [copied, setCopied] = useState<string | undefined>();
-  const [clipboardNote, setClipboardNote] = useState<string | undefined>();
-  const [savedTo, setSavedTo] = useState<string | undefined>();
+  const [notice, setNotice] = useState<ToastMessage | undefined>();
   const [mode, setMode] = useState<'one' | 'list'>('one');
+  const [step, setStep] = useState<string | undefined>();
 
   const run = async () => {
     setError(undefined);
     setResult(undefined);
-    setSavedTo(undefined);
-    setRunning('Searching and reading product pages');
+    setStep('read');
+    setRunning('Reading product pages');
 
     try {
       const list = urls
@@ -104,6 +108,7 @@ export function PrepareRunner() {
       let current = response;
       const shortlist = response.candidates.filter((c) => c.usable).slice(0, 8);
       if (shortlist.length > 1) {
+        setStep('images');
         setRunning('Looking at the images');
         try {
           const scores = await scoreProductShots(
@@ -124,6 +129,7 @@ export function PrepareRunner() {
 
       // Third pass: read the accepted bottle's own colours and rebuild the direction.
       if (current.perfume.bottleImageUrl) {
+        setStep('colours');
         setRunning('Sampling the bottle colours');
         try {
           const palette = await samplePalette(current.perfume.bottleImageUrl);
@@ -161,14 +167,17 @@ export function PrepareRunner() {
       setError(errorMessage(cause));
     } finally {
       setRunning(undefined);
+      setStep(undefined);
     }
   };
 
   const bottleUrl = result?.perfume.bottleImageUrl || undefined;
+  const canRun = brand.trim().length >= 1 && name.trim().length >= 2 && !running;
 
   const flash = (key: string, outcome: ClipboardOutcome, detail?: string) => {
     setCopied(key);
-    setClipboardNote(detail ?? OUTCOME_NOTES[outcome]);
+    const text = detail ?? OUTCOME_NOTES[outcome];
+    if (text) setNotice(toast(text, 'good'));
     setTimeout(() => setCopied(undefined), 2500);
   };
 
@@ -229,7 +238,13 @@ export function PrepareRunner() {
       const response = await api.get<{ savedTo?: string }>(
         `/api/perfumes/${result.perfume.id}/prompt?save=true`,
       );
-      setSavedTo(response.savedTo);
+      setNotice(
+        response.savedTo
+          ? toast(`Written to ${response.savedTo}`, 'good')
+          : // The route reports this as a warning rather than an error, so it would
+            // otherwise look like the save had silently worked.
+            toast('The prompt file could not be written to the export folder.', 'bad'),
+      );
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -244,6 +259,7 @@ export function PrepareRunner() {
       <div className="space-y-6">
         <ModeSwitch mode={mode} onChange={setMode} />
         <BatchPrepare onFinished={() => router.refresh()} />
+        <Toast message={notice} />
       </div>
     );
   }
@@ -253,71 +269,111 @@ export function PrepareRunner() {
       <ModeSwitch mode={mode} onChange={setMode} />
 
       <Card>
-        <CardHeader title="Perfume" description="Brand and name are enough." />
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Brand" required>
-            {({ id }) => (
-              <TextInput id={id} value={brand} onChange={(e) => setBrand(e.target.value)} />
-            )}
-          </Field>
-          <Field label="Name" required>
-            {({ id }) => <TextInput id={id} value={name} onChange={(e) => setName(e.target.value)} />}
-          </Field>
-          <Field label="Variant" hint="Optional">
-            {({ id }) => (
-              <TextInput id={id} value={variant} onChange={(e) => setVariant(e.target.value)} />
-            )}
-          </Field>
-        </div>
+        <CardHeader
+          title="Perfume"
+          description="Name the perfume, then give it a page to read."
+        />
 
         {/*
-          Open by default, because this is the reliable path rather than the advanced one.
-          Keyless web search is blocked from this machine, so leaving this collapsed hides
-          the field that actually works behind a toggle labelled as an exception.
+          A real form, so Enter submits from any field.
+          Before this the inputs sat in a bare div and the only way to start a run was to
+          find the button, which is the wrong shape for a three-field form.
         */}
-        <details className="mt-4" open>
-          <summary className="cursor-pointer text-xs text-bone-400 hover:text-bone-200">
-            Pages to read (recommended)
-          </summary>
-          <div className="mt-3">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!canRun) return;
+            void run();
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Brand" required>
+              {({ id }) => (
+                <TextInput
+                  id={id}
+                  value={brand}
+                  autoFocus
+                  placeholder="Lattafa"
+                  onChange={(e) => setBrand(e.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Name" required>
+              {({ id }) => (
+                <TextInput
+                  id={id}
+                  value={name}
+                  placeholder="Khamrah Qahwa"
+                  onChange={(e) => setName(e.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Variant" hint="Optional">
+              {({ id }) => (
+                <TextInput
+                  id={id}
+                  value={variant}
+                  placeholder="Elixir"
+                  onChange={(e) => setVariant(e.target.value)}
+                />
+              )}
+            </Field>
+          </div>
+
+          {/*
+            A first-class field, not an "advanced" disclosure.
+            Keyless web search is blocked from this machine, so the URL is the path that
+            actually works. Hiding it behind a toggle labelled as an exception, while the
+            default route was advertised as likely to fail, had the hierarchy backwards.
+          */}
+          <div className="mt-4">
             <Field
-              label="Product page URLs"
-              hint="One per line. A Fragrantica perfume page is the best single source: it gives the full note pyramid, the accords and the real bottle photograph."
+              label="Page to read"
+              hint="A Fragrantica perfume page is the best single source: full note pyramid, accords, and the real bottle photograph. One per line for several."
             >
               {({ id }) => (
                 <TextArea
                   id={id}
-                  rows={3}
+                  rows={2}
                   value={urls}
                   onChange={(e) => setUrls(e.target.value)}
-                  placeholder={
-                    'https://www.fragrantica.com/perfume/Lattafa-Perfumes/Teriaq-Intense-99586.html'
-                  }
+                  // Deliberately a template rather than a working link: a copyable
+                  // example URL got pasted as-is and produced a record carrying another
+                  // perfume's notes and bottle under this perfume's name.
+                  placeholder="https://www.fragrantica.com/perfume/<Brand>/<Name>-<id>.html"
+                  className="font-mono text-xs"
                 />
               )}
             </Field>
-            <p className="mt-2 text-xs text-bone-600">
-              Leaving this empty makes the app search for pages itself, which is currently
-              blocked from this machine and will usually fail.
-            </p>
           </div>
-        </details>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <Button
-            variant="primary"
-            size="lg"
-            loading={Boolean(running)}
-            disabled={brand.trim().length < 1 || name.trim().length < 2}
-            onClick={() => void run()}
-          >
-            Prepare campaign
-          </Button>
-          {running ? <span className="text-sm text-bone-400">{running}…</span> : null}
-        </div>
-        <p className="mt-3 text-xs text-bone-600">
-          Reads a handful of pages with a pause between each. Expect around 30 to 60 seconds.
-        </p>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              loading={Boolean(running)}
+              disabled={!canRun}
+            >
+              Prepare prompt
+            </Button>
+            {!running && urls.trim().length === 0 ? (
+              <span className="text-xs text-amber-warn">
+                No page given, so the app will search for one — currently blocked from
+                this machine, so expect it to fail.
+              </span>
+            ) : null}
+          </div>
+        </form>
+
+        {running ? (
+          <ProgressSteps steps={PREPARE_STEPS} activeKey={step} className="mt-5" />
+        ) : (
+          <p className="mt-3 text-xs text-bone-600">
+            Reads the page, measures the candidate images, then samples the bottle&rsquo;s
+            colours. Around 30 to 60 seconds.
+          </p>
+        )}
       </Card>
 
       {error ? <ErrorState message={error} /> : null}
@@ -333,7 +389,7 @@ export function PrepareRunner() {
                   href={`/perfumes/${result.perfume.id}`}
                   className="text-xs text-gold-300 hover:text-gold-400"
                 >
-                  Open in the wizard
+                  Open workspace
                 </Link>
               }
             />
@@ -403,6 +459,19 @@ export function PrepareRunner() {
             </details>
           </Card>
 
+          {result.warnings.length > 0 ? (
+            <Card>
+              <CardHeader title="Worth checking" />
+              <ul className="space-y-1.5">
+                {result.warnings.map((warning) => (
+                  <li key={warning} className="text-sm text-amber-warn">
+                    {warning}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
           {direction ? (
             <Card>
               <CardHeader
@@ -422,12 +491,14 @@ export function PrepareRunner() {
               </dl>
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {direction.colorPalette.map((colour) => (
-                  <span
-                    key={colour}
-                    title={colour}
-                    className="h-8 w-8 rounded-md border border-ink-600"
-                    style={{ backgroundColor: colour }}
-                  />
+                  <span key={colour} title={colour} className="inline-flex flex-col items-center gap-1">
+                    <span
+                      aria-hidden
+                      className="h-8 w-8 rounded-md border border-ink-600"
+                      style={{ backgroundColor: colour }}
+                    />
+                    <span className="font-mono text-[0.5625rem] text-bone-600">{colour}</span>
+                  </span>
                 ))}
               </div>
             </Card>
@@ -504,13 +575,7 @@ export function PrepareRunner() {
                 </div>
               ) : null}
 
-              {clipboardNote ? (
-                <p className="mb-3 text-xs text-jade-400">{clipboardNote}</p>
-              ) : null}
-              {savedTo ? (
-                <p className="mb-3 text-xs text-jade-400">Written to {savedTo}</p>
-              ) : null}
-              <pre className="max-h-96 overflow-auto rounded-lg border border-ink-700 bg-ink-900 p-3 text-[0.6875rem] leading-relaxed whitespace-pre-wrap text-bone-400">
+              <pre className="max-h-96 overflow-auto rounded-lg border border-ink-700 bg-ink-900 p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-bone-200">
                 {result.prompt}
               </pre>
 
@@ -535,20 +600,10 @@ export function PrepareRunner() {
             </Card>
           ) : null}
 
-          {result.warnings.length > 0 ? (
-            <Card>
-              <CardHeader title="Worth checking" />
-              <ul className="space-y-1.5">
-                {result.warnings.map((warning) => (
-                  <li key={warning} className="text-sm text-[var(--color-amber-warn)]">
-                    {warning}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ) : null}
         </>
       ) : null}
+
+      <Toast message={notice} />
     </div>
   );
 }
@@ -581,6 +636,12 @@ function hostOf(url: string): string {
   }
 }
 
+const PREPARE_STEPS = [
+  { key: 'read', label: 'Reading the page' },
+  { key: 'images', label: 'Measuring the candidate images' },
+  { key: 'colours', label: 'Sampling the bottle colours' },
+] as const;
+
 /** What actually landed on the clipboard, stated plainly. */
 const OUTCOME_NOTES: Record<ClipboardOutcome, string | undefined> = {
   'text-and-image':
@@ -609,7 +670,7 @@ function ModeSwitch({
           key={key}
           type="button"
           onClick={() => onChange(key)}
-          aria-current={mode === key ? 'true' : undefined}
+          aria-pressed={mode === key}
           className={
             mode === key
               ? 'rounded-lg bg-ink-800 px-3 py-1.5 text-xs tracking-[0.1em] text-bone-50 uppercase'

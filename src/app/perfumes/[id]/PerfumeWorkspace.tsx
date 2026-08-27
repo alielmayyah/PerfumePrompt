@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -200,7 +201,17 @@ export function PerfumeWorkspace({
   return (
     <>
       <PageHeader
-        eyebrow={perfume.brand}
+        eyebrow={
+          <span className="flex items-center gap-1.5">
+            <Link href="/perfumes" className="hover:text-bone-200">
+              Library
+            </Link>
+            <span aria-hidden className="text-ink-500">
+              /
+            </span>
+            <span>{perfume.brand}</span>
+          </span>
+        }
         title={perfume.name}
         description={
           perfume.variant ? (

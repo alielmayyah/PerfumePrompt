@@ -23,3 +23,7 @@ exports/*
 
 # stray dev-server pid files
 .pid*.tmp
+
+# flow macro: exported queue is regenerated, positions are per-screen
+tools/flow_macro/queue/
+tools/flow_macro/positions.json

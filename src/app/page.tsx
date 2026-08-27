@@ -14,8 +14,9 @@ export default function HomePage() {
   return (
     <>
       <PageHeader
+        eyebrow="Prepare"
         title="Prompt preparer"
-        description="Brand and name in. Scrapes the fragrance notes and the real bottle photograph from the open web, works out the art direction, and gives you a detailed prompt plus the raw bottle image to copy into Google Flow."
+        description="Name a perfume and give it a page to read. You get the fragrance notes, the real bottle photograph, an art direction derived from both, and a prompt ready to paste into Google Flow."
       />
       <PrepareRunner />
     </>

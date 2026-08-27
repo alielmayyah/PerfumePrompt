@@ -36,7 +36,7 @@ export default async function PerfumesPage() {
       <PageHeader
         eyebrow="Library"
         title="Prompt matrix"
-        description="Every prepared perfume, with its prompt and bottle image a click away. Open a row to correct its notes, swap the bottle, or adjust the art direction."
+        description="Every prepared perfume, with its prompt and bottle a click away. Sort by any column, or open a row to fix its notes, swap the bottle or adjust the art direction."
         actions={
           <LinkButton variant="primary" href="/">
             Prepare more
@@ -47,7 +47,7 @@ export default async function PerfumesPage() {
       {rows.length === 0 ? (
         <EmptyState
           title="Nothing prepared yet"
-          description="Paste a list of perfumes on the Prepare screen and the rest is automatic."
+          description="Prepare a perfume and it appears here, with its prompt and bottle ready to copy."
           action={
             <LinkButton variant="primary" href="/">
               Prepare perfumes

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Field, TextInput } from '@/components/ui/Field';
 import { ErrorState } from '@/components/ui/States';
+import { Toast, toast, type ToastMessage } from '@/components/ui/Toast';
 import { cn } from '@/lib/utils/cn';
 import {
   copyImage,
@@ -28,6 +29,16 @@ export interface PerfumeMatrixProps {
   rows: MatrixRow[];
 }
 
+type SortKey = 'brand' | 'name' | 'concept' | 'notes';
+type SortDirection = 'asc' | 'desc';
+
+const COLUMNS: { key: SortKey; label: string; className?: string }[] = [
+  { key: 'brand', label: 'Brand' },
+  { key: 'name', label: 'Name' },
+  { key: 'concept', label: 'Concept' },
+  { key: 'notes', label: 'Notes', className: 'w-24' },
+];
+
 /**
  * Every prepared perfume in one table, with its prompt and bottle a click away.
  *
@@ -36,30 +47,58 @@ export interface PerfumeMatrixProps {
  * row is the same two artefacts. Prompts are built on the server and passed down, so a
  * copy is instant and stays inside the click that triggered it — fetching first risks
  * losing the user gesture the clipboard API depends on.
+ *
+ * Below `md` the same rows render as cards. A six-column table on a phone is a
+ * horizontal scroll with the action buttons permanently off screen, which defeats the
+ * one thing this screen is for.
  */
 export function PerfumeMatrix({ rows }: PerfumeMatrixProps) {
   const router = useRouter();
   const [filter, setFilter] = useState('');
   const [copied, setCopied] = useState<string | undefined>();
-  const [note, setNote] = useState<string | undefined>();
+  const [notice, setNotice] = useState<ToastMessage | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [armedDelete, setArmedDelete] = useState<string | undefined>();
   const [deleting, setDeleting] = useState<string | undefined>();
+  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({
+    key: 'brand',
+    direction: 'asc',
+  });
 
   const visible = useMemo(() => {
     const needle = filter.trim().toLowerCase();
-    if (!needle) return rows;
-    return rows.filter((row) =>
-      [row.perfume.brand, row.perfume.name, row.perfume.variant ?? '']
-        .join(' ')
-        .toLowerCase()
-        .includes(needle),
+    const matched = needle
+      ? rows.filter((row) =>
+          [
+            row.perfume.brand,
+            row.perfume.name,
+            row.perfume.variant ?? '',
+            // Concept is searchable too: with a library this size "which one did I put
+            // in the coffee world?" is a more natural question than the perfume's name.
+            row.perfume.creativeDirection?.concept ?? '',
+          ]
+            .join(' ')
+            .toLowerCase()
+            .includes(needle),
+        )
+      : rows;
+
+    const factor = sort.direction === 'asc' ? 1 : -1;
+    return [...matched].sort((a, b) => factor * compareRows(a, b, sort.key));
+  }, [rows, filter, sort]);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((current) =>
+      current.key === key
+        ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+        : // Note count is most useful largest-first; text columns read A–Z.
+          { key, direction: key === 'notes' ? 'desc' : 'asc' },
     );
-  }, [rows, filter]);
+  };
 
   const flash = (key: string, message: string) => {
     setCopied(key);
-    setNote(message);
+    setNotice(toast(message, 'good'));
     setTimeout(() => setCopied(undefined), 2000);
   };
 
@@ -116,7 +155,7 @@ export function PerfumeMatrix({ rows }: PerfumeMatrixProps) {
     // First click arms, second click deletes. Arming one row disarms any other.
     if (armedDelete !== id) {
       setArmedDelete(id);
-      setNote(`Click “Sure?” again to remove ${brand} ${name}.`);
+      setNotice(toast(`Click “Sure?” again to remove ${brand} ${name}.`, 'info'));
       return;
     }
 
@@ -124,7 +163,7 @@ export function PerfumeMatrix({ rows }: PerfumeMatrixProps) {
     try {
       await api.delete(`/api/perfumes/${id}`);
       setArmedDelete(undefined);
-      setNote(`${brand} ${name} removed.`);
+      setNotice(toast(`${brand} ${name} removed.`, 'good'));
       // The rows are server-rendered, so the list has to be refetched to drop the row.
       router.refresh();
     } catch (cause) {
@@ -136,6 +175,20 @@ export function PerfumeMatrix({ rows }: PerfumeMatrixProps) {
 
   const ready = rows.filter((row) => row.prompt && row.perfume.bottleImageUrl).length;
 
+  const actions = (row: MatrixRow) => (
+    <RowActions
+      row={row}
+      copied={copied}
+      armedDelete={armedDelete}
+      deleting={deleting}
+      onCopyPrompt={doCopyPrompt}
+      onCopyImage={doCopyImage}
+      onCopyBoth={doCopyBoth}
+      onDownload={doDownload}
+      onDelete={doDelete}
+    />
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -144,53 +197,50 @@ export function PerfumeMatrix({ rows }: PerfumeMatrixProps) {
             <TextInput
               id={id}
               value={filter}
-              placeholder="Brand or name"
+              placeholder="Brand, name or concept"
               onChange={(event) => setFilter(event.target.value)}
             />
           )}
         </Field>
-        <p className="text-xs text-bone-600">
+        <p className="text-xs text-bone-600" aria-live="polite">
+          {filter.trim() ? `${visible.length} shown · ` : ''}
           {ready} of {rows.length} ready to copy
         </p>
       </div>
 
-      {note ? <p className="text-xs text-jade-400">{note}</p> : null}
       {error ? <ErrorState message={error} /> : null}
 
-      {/* The table scrolls inside its own container so the page never scrolls sideways. */}
-      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-ink-700">
+      {/* Desktop: the dense table. */}
+      <div className="hidden overflow-x-auto rounded-card border border-ink-700 md:block">
         <table className="w-full min-w-[52rem] border-collapse text-sm">
           <thead>
             <tr className="border-b border-ink-700 bg-ink-850 text-left">
               <Th className="w-16">Bottle</Th>
-              <Th>Brand</Th>
-              <Th>Name</Th>
-              <Th>Concept</Th>
-              <Th className="w-24">Notes</Th>
-              <Th className="w-[19rem]">Copy</Th>
+              {COLUMNS.map((column) => (
+                <Th key={column.key} className={column.className} sorted={sort.key === column.key ? sort.direction : undefined}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(column.key)}
+                    className="inline-flex items-center gap-1 uppercase hover:text-bone-200"
+                  >
+                    {column.label}
+                    <SortMark
+                      active={sort.key === column.key}
+                      direction={sort.direction}
+                    />
+                  </button>
+                </Th>
+              ))}
+              <Th className="w-84">Copy</Th>
             </tr>
           </thead>
           <tbody>
             {visible.map((row) => {
               const { perfume } = row;
-              const hasImage = Boolean(perfume.bottleImageUrl);
-              const noteCount =
-                perfume.topNotes.length + perfume.heartNotes.length + perfume.baseNotes.length;
-
               return (
-                <tr key={perfume.id} className="border-b border-ink-800 last:border-b-0">
+                <tr key={perfume.id} className="border-b border-ink-800 transition-colors last:border-b-0 hover:bg-ink-850/60">
                   <Td>
-                    <div className="studio-alpha-grid h-12 w-12 overflow-hidden rounded-md bg-ink-900">
-                      {hasImage ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={perfume.bottleImageUrl}
-                          alt={`${perfume.name} bottle`}
-                          loading="lazy"
-                          className="h-full w-full object-contain p-0.5"
-                        />
-                      ) : null}
-                    </div>
+                    <BottleThumb perfume={perfume} />
                   </Td>
                   <Td className="text-bone-400">{perfume.brand}</Td>
                   <Td>
@@ -210,54 +260,9 @@ export function PerfumeMatrix({ rows }: PerfumeMatrixProps) {
                     )}
                   </Td>
                   <Td>
-                    <Badge tone={noteCount > 0 ? (perfume.notesApproved ? 'good' : 'warn') : 'bad'}>
-                      {noteCount > 0 ? `${noteCount}` : 'none'}
-                    </Badge>
+                    <NoteBadge perfume={perfume} />
                   </Td>
-                  <Td>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Button
-                        size="sm"
-                        disabled={!row.prompt}
-                        onClick={() => void doCopyPrompt(row)}
-                      >
-                        {copied === `p-${perfume.id}` ? 'Copied' : 'Prompt'}
-                      </Button>
-                      <Button size="sm" disabled={!hasImage} onClick={() => void doCopyImage(row)}>
-                        {copied === `i-${perfume.id}` ? 'Copied' : 'Image'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        disabled={!row.prompt || !hasImage}
-                        onClick={() => void doCopyBoth(row)}
-                      >
-                        {copied === `b-${perfume.id}` ? 'Copied' : 'Both'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={!hasImage}
-                        onClick={() => void doDownload(row)}
-                      >
-                        Save
-                      </Button>
-                      {/*
-                        Two clicks, not a browser confirm(): deleting is unrecoverable
-                        here (there is no undo and no trash), and a native dialog is easy
-                        to dismiss by reflex. Arming the button in place makes the second
-                        click the deliberate one.
-                      */}
-                      <Button
-                        size="sm"
-                        variant={armedDelete === perfume.id ? 'primary' : 'ghost'}
-                        loading={deleting === perfume.id}
-                        onClick={() => void doDelete(row)}
-                      >
-                        {armedDelete === perfume.id ? 'Sure?' : 'Delete'}
-                      </Button>
-                    </div>
-                  </Td>
+                  <Td>{actions(row)}</Td>
                 </tr>
               );
             })}
@@ -265,17 +270,195 @@ export function PerfumeMatrix({ rows }: PerfumeMatrixProps) {
         </table>
       </div>
 
+      {/* Mobile: the same rows as cards, so the actions stay reachable. */}
+      <ul className="space-y-3 md:hidden">
+        {visible.map((row) => {
+          const { perfume } = row;
+          return (
+            <li key={perfume.id} className="studio-card p-3">
+              <div className="flex items-start gap-3">
+                <BottleThumb perfume={perfume} size="lg" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-bone-600">{perfume.brand}</p>
+                  <Link
+                    href={`/perfumes/${perfume.id}`}
+                    className="block truncate text-sm text-bone-50 hover:text-gold-300"
+                  >
+                    {perfume.name}
+                    {perfume.variant ? ` · ${perfume.variant}` : ''}
+                  </Link>
+                  <p className="mt-1 truncate text-xs text-bone-400">
+                    {perfume.creativeDirection?.concept ?? 'not built'}
+                  </p>
+                </div>
+                <NoteBadge perfume={perfume} />
+              </div>
+              <div className="mt-3">{actions(row)}</div>
+            </li>
+          );
+        })}
+      </ul>
+
       {visible.length === 0 ? (
         <p className="py-6 text-center text-sm text-bone-600">Nothing matches that filter.</p>
       ) : null}
+
+      <Toast message={notice} />
     </div>
   );
 }
 
-function Th({ children, className }: { children: React.ReactNode; className?: string }) {
+function RowActions({
+  row,
+  copied,
+  armedDelete,
+  deleting,
+  onCopyPrompt,
+  onCopyImage,
+  onCopyBoth,
+  onDownload,
+  onDelete,
+}: {
+  row: MatrixRow;
+  copied: string | undefined;
+  armedDelete: string | undefined;
+  deleting: string | undefined;
+  onCopyPrompt: (row: MatrixRow) => Promise<void>;
+  onCopyImage: (row: MatrixRow) => Promise<void>;
+  onCopyBoth: (row: MatrixRow) => Promise<void>;
+  onDownload: (row: MatrixRow) => Promise<void>;
+  onDelete: (row: MatrixRow) => Promise<void>;
+}) {
+  const { perfume } = row;
+  const hasImage = Boolean(perfume.bottleImageUrl);
+  const armed = armedDelete === perfume.id;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Button size="sm" disabled={!row.prompt} onClick={() => void onCopyPrompt(row)}>
+        {copied === `p-${perfume.id}` ? 'Copied' : 'Prompt'}
+      </Button>
+      <Button size="sm" disabled={!hasImage} onClick={() => void onCopyImage(row)}>
+        {copied === `i-${perfume.id}` ? 'Copied' : 'Image'}
+      </Button>
+      <Button
+        size="sm"
+        variant="primary"
+        disabled={!row.prompt || !hasImage}
+        onClick={() => void onCopyBoth(row)}
+      >
+        {copied === `b-${perfume.id}` ? 'Copied' : 'Both'}
+      </Button>
+      <Button size="sm" variant="ghost" disabled={!hasImage} onClick={() => void onDownload(row)}>
+        Save
+      </Button>
+
+      {/*
+        The destructive action is pushed away from the copy cluster and styled as danger.
+        It previously sat flush against "Save" in an identical ghost button, one place
+        along from the button pressed most often on this screen.
+
+        Two clicks, not a browser confirm(): deleting is unrecoverable here (no undo, no
+        trash), and a native dialog is easy to dismiss by reflex. Arming in place makes
+        the second click the deliberate one.
+      */}
+      <Button
+        size="sm"
+        variant="danger"
+        className="ml-auto md:ml-2"
+        loading={deleting === perfume.id}
+        aria-label={armed ? `Confirm removing ${perfume.brand} ${perfume.name}` : `Remove ${perfume.brand} ${perfume.name}`}
+        onClick={() => void onDelete(row)}
+      >
+        {armed ? 'Sure?' : 'Delete'}
+      </Button>
+    </div>
+  );
+}
+
+function BottleThumb({ perfume, size = 'md' }: { perfume: Perfume; size?: 'md' | 'lg' }) {
+  const box = size === 'lg' ? 'h-16 w-16' : 'h-12 w-12';
+  if (!perfume.bottleImageUrl) {
+    return (
+      <div
+        className={cn(
+          box,
+          'flex shrink-0 items-center justify-center rounded-md border border-dashed border-ink-600 text-[0.5625rem] text-bone-600',
+        )}
+      >
+        none
+      </div>
+    );
+  }
+  return (
+    <div className={cn(box, 'studio-alpha-grid shrink-0 overflow-hidden rounded-md bg-ink-900')}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={perfume.bottleImageUrl}
+        alt={`${perfume.brand} ${perfume.name} bottle`}
+        loading="lazy"
+        className="h-full w-full object-contain p-0.5"
+      />
+    </div>
+  );
+}
+
+function NoteBadge({ perfume }: { perfume: Perfume }) {
+  const count =
+    perfume.topNotes.length + perfume.heartNotes.length + perfume.baseNotes.length;
+  const tone = count === 0 ? 'bad' : perfume.notesApproved ? 'good' : 'warn';
+  // The count alone did not say why a row was amber; the title makes the state legible.
+  const title =
+    count === 0
+      ? 'No notes yet'
+      : perfume.notesApproved
+        ? `${count} notes, approved`
+        : `${count} notes, not approved yet`;
+
+  return (
+    <span title={title} className="shrink-0">
+      <Badge tone={tone}>{count > 0 ? `${count}` : 'none'}</Badge>
+      <span className="sr-only">{title}</span>
+    </span>
+  );
+}
+
+function SortMark({ active, direction }: { active: boolean; direction: SortDirection }) {
+  return (
+    <span aria-hidden className={cn('text-[0.625rem]', active ? 'text-gold-300' : 'text-ink-500')}>
+      {active ? (direction === 'asc' ? '▲' : '▼') : '▾'}
+    </span>
+  );
+}
+
+function compareRows(a: MatrixRow, b: MatrixRow, key: SortKey): number {
+  if (key === 'notes') {
+    const count = (row: MatrixRow) =>
+      row.perfume.topNotes.length + row.perfume.heartNotes.length + row.perfume.baseNotes.length;
+    return count(a) - count(b);
+  }
+  const value = (row: MatrixRow) =>
+    key === 'concept'
+      ? (row.perfume.creativeDirection?.concept ?? '')
+      : key === 'brand'
+        ? row.perfume.brand
+        : row.perfume.name;
+  return value(a).localeCompare(value(b), undefined, { sensitivity: 'base' });
+}
+
+function Th({
+  children,
+  className,
+  sorted,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  sorted?: SortDirection | undefined;
+}) {
   return (
     <th
       scope="col"
+      aria-sort={sorted ? (sorted === 'asc' ? 'ascending' : 'descending') : undefined}
       className={cn(
         'px-3 py-2.5 text-[0.6875rem] font-medium tracking-[0.14em] text-bone-400 uppercase',
         className,

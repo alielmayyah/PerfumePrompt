@@ -13,6 +13,7 @@ import {
   downloadImage,
   type ClipboardOutcome,
 } from '@/lib/utils/clipboard';
+import { Toast, toast, type ToastMessage } from '@/components/ui/Toast';
 import type { Perfume } from '@/lib/types';
 
 export interface PromptPanelProps {
@@ -31,7 +32,7 @@ export interface PromptPanelProps {
  */
 export function PromptPanel({ perfume, prompt, variationPrompts = [], className }: PromptPanelProps) {
   const [copied, setCopied] = useState<string | undefined>();
-  const [note, setNote] = useState<string | undefined>();
+  const [notice, setNotice] = useState<ToastMessage | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [savedTo, setSavedTo] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
@@ -40,7 +41,8 @@ export function PromptPanel({ perfume, prompt, variationPrompts = [], className 
 
   const flash = (key: string, outcome: ClipboardOutcome, detail?: string) => {
     setCopied(key);
-    setNote(detail ?? OUTCOME_NOTES[outcome]);
+    const text = detail ?? OUTCOME_NOTES[outcome];
+    if (text) setNotice(toast(text, 'good'));
     setTimeout(() => setCopied(undefined), 2500);
   };
 
@@ -150,7 +152,6 @@ export function PromptPanel({ perfume, prompt, variationPrompts = [], className 
         </div>
       ) : null}
 
-      {note ? <p className="mb-3 text-xs text-jade-400">{note}</p> : null}
       {savedTo ? <p className="mb-3 text-xs text-jade-400">Written to {savedTo}</p> : null}
       {error ? <ErrorState className="mb-3" message={error} /> : null}
 
@@ -178,6 +179,8 @@ export function PromptPanel({ perfume, prompt, variationPrompts = [], className 
           </div>
         </>
       ) : null}
+
+      <Toast message={notice} />
     </Card>
   );
 }
