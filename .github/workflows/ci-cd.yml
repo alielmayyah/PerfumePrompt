@@ -1,4 +1,4 @@
-name: CI & Portable Release
+name: CI & Portable Multi-Platform Release
 
 on:
   push:
@@ -43,8 +43,8 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-  release:
-    name: Build & Publish Portable Release (.exe)
+  package-windows:
+    name: Package Windows Edition (.exe)
     needs: test
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
@@ -65,6 +65,58 @@ jobs:
 
       - name: Package Portable Windows Edition
         run: npm run package:portable
+
+      - name: Upload Windows Release Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: |
+            dist/PerfumePrompt.exe
+            dist/PerfumePrompt-Portable.zip
+
+  package-linux:
+    name: Package Linux Edition (.tar.gz)
+    needs: test
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Package Portable Linux Edition
+        run: npm run package:portable
+
+      - name: Upload Linux Release Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: dist/PerfumePrompt-linux-x64.tar.gz
+
+  release:
+    name: Publish GitHub Release
+    needs: [package-windows, package-linux]
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Determine Tag Name
         id: vars
@@ -90,17 +142,26 @@ jobs:
           files: |
             dist/PerfumePrompt.exe
             dist/PerfumePrompt-Portable.zip
+            dist/PerfumePrompt-linux-x64.tar.gz
           draft: false
           prerelease: false
           generate_release_notes: true
           body: |
-            ### Perfume Prompt Preparer - Windows Desktop Edition
+            ### Perfume Prompt Preparer - Multi-Platform Distribution
 
-            #### Option A: Single-File Self-Updating Launcher (Recommended)
-            1. Download **`PerfumePrompt.exe`**.
-            2. Double-click it. It automatically downloads the latest release, keeps itself updated on every run, and opens `http://localhost:3000`.
-            *No manual extraction or unzipping required.*
+            #### 🪟 Windows Users
+            * **Option 1: Single-File Self-Updating Launcher (Recommended)**
+              1. Download **`PerfumePrompt.exe`**.
+              2. Double-click it. It automatically manages updates, launches the local server, and opens your browser to `http://localhost:3000`.
+            * **Option 2: Offline Standalone ZIP**
+              1. Download and extract **`PerfumePrompt-Portable.zip`**.
+              2. Run **`PerfumePrompt.exe`** (or `start.bat`) inside the extracted folder.
 
-            #### Option B: Offline Portable Package
-            1. Download and extract **`PerfumePrompt-Portable.zip`**.
-            2. Double-click **`PerfumePrompt.exe`** (or `start.bat`) inside the folder.
+            ---
+
+            #### 🐧 Linux Users (x64)
+            * **Zero-Install Portable Tarball**
+              1. Download **`PerfumePrompt-linux-x64.tar.gz`**.
+              2. Extract: `tar -xzf PerfumePrompt-linux-x64.tar.gz`
+              3. Run: `./PerfumePrompt-linux-x64/start.sh`
+              *(Includes pre-bundled Node.js runtime; no installation required).*
