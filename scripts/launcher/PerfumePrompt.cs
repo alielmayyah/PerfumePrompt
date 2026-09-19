@@ -87,11 +87,50 @@ namespace PerfumePrompt
                         latestTag = tagMatch.Groups[1].Value;
                     }
 
+                    // Extract target_commitish (commit SHA) or published_at for rolling releases
+                    string releaseFingerprint = latestTag ?? "";
+                    var commitMatch = Regex.Match(json, "\"target_commitish\"\\s*:\\s*\"([^\"]+)\"");
+                    var dateMatch = Regex.Match(json, "\"published_at\"\\s*:\\s*\"([^\"]+)\"");
+                    if (commitMatch.Success)
+                    {
+                        releaseFingerprint += "-" + commitMatch.Groups[1].Value;
+                    }
+                    else if (dateMatch.Success)
+                    {
+                        releaseFingerprint += "-" + dateMatch.Groups[1].Value;
+                    }
+
                     // Extract browser_download_url for PerfumePrompt-Portable.zip
                     var urlMatch = Regex.Match(json, "\"browser_download_url\"\\s*:\\s*\"([^\"]+PerfumePrompt-Portable\\.zip)\"");
                     if (urlMatch.Success)
                     {
                         downloadUrl = urlMatch.Groups[1].Value;
+                    }
+
+                    if (!string.IsNullOrEmpty(downloadUrl))
+                    {
+                        bool isNewer = string.IsNullOrEmpty(currentVersion) || !string.Equals(currentVersion, releaseFingerprint, StringComparison.OrdinalIgnoreCase);
+
+                        if (isNewer || serverMissing)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine("Update found (" + latestTag + ")!");
+                            Console.ResetColor();
+
+                            DownloadAndExtractUpdate(downloadUrl, appDir);
+                            try
+                            {
+                                File.WriteAllText(versionFile, releaseFingerprint);
+                            }
+                            catch { }
+                            return;
+                        }
+                        else
+                        {
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine("Up to date (" + (latestTag ?? "latest") + ").");
+                            Console.ResetColor();
+                        }
                     }
                 }
             }
@@ -100,44 +139,16 @@ namespace PerfumePrompt
                 Console.WriteLine("offline or skipped (" + ex.Message + ").");
             }
 
-            if (!string.IsNullOrEmpty(latestTag) && !string.IsNullOrEmpty(downloadUrl))
+            if (serverMissing)
             {
-                bool isNewer = string.IsNullOrEmpty(currentVersion) || !string.Equals(currentVersion, latestTag, StringComparison.OrdinalIgnoreCase);
-
-                if (isNewer || serverMissing)
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Update found (" + latestTag + ")!");
-                    Console.ResetColor();
-
-                    DownloadAndExtractUpdate(downloadUrl, appDir);
-                    try
-                    {
-                        File.WriteAllText(versionFile, latestTag);
-                    }
-                    catch { }
-                    return;
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Up to date (" + currentVersion + ").");
-                    Console.ResetColor();
-                }
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("\nFirst-time setup: Could not fetch initial release from GitHub.");
+                Console.WriteLine("Please ensure you have an active internet connection.\n");
+                Console.ResetColor();
             }
             else
             {
-                if (serverMissing)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("\nFirst-time setup: Could not fetch initial release from GitHub.");
-                    Console.WriteLine("Please ensure you have an active internet connection.\n");
-                    Console.ResetColor();
-                }
-                else
-                {
-                    Console.WriteLine("Continuing with installed version.");
-                }
+                Console.WriteLine("Continuing with installed version.");
             }
         }
 

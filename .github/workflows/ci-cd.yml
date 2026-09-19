@@ -46,7 +46,7 @@ jobs:
   release:
     name: Build & Publish Portable Release (.exe)
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     steps:
       - name: Check out repository
@@ -72,15 +72,21 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "title=Release ${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "tag=latest" >> $GITHUB_OUTPUT
+            echo "title=Perfume Prompt Preparer (Latest)" >> $GITHUB_OUTPUT
           else
-            echo "tag=${{ github.event.inputs.tag_name || 'v1.0.0' }}" >> $GITHUB_OUTPUT
+            echo "tag=${{ github.event.inputs.tag_name || 'latest' }}" >> $GITHUB_OUTPUT
+            echo "title=Perfume Prompt Preparer (${{ github.event.inputs.tag_name || 'latest' }})" >> $GITHUB_OUTPUT
           fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
-          name: Perfume Prompt Preparer ${{ steps.vars.outputs.tag }}
+          name: ${{ steps.vars.outputs.title }}
+          make_latest: true
           files: |
             dist/PerfumePrompt.exe
             dist/PerfumePrompt-Portable.zip
