@@ -211,27 +211,3 @@ tests/
 ```
 
 ---
-
-## Testing
-
-```bash
-npm run typecheck && npm run lint && npm test
-```
-
-Coverage focuses on the parts that fail silently: the prompt builder (bottle protection,
-text suppression, safe areas, never referencing a description it did not include), the
-web parsers against captured markup, the rule engine (world selection, hero ranking,
-atmosphere separation, motif discipline, palette handling) plus a catalogue-spread check
-that five perfumes yield five distinct concepts, the persistence layer including
-patch-clearing semantics, and the clipboard handoff with each of its fallbacks.
-
-## Known limitations
-
-- **Single instance.** The JSON store assumes one server writing one directory, and
-  `.data/` is the only copy of everything. Back it up by copying the folder.
-- **No authentication.** Every route is open to whoever can reach the server.
-- **Scraping is best-effort.** Some sites refuse automated requests. When notes cannot be
-  extracted the app says so, and you can paste product page URLs directly or enter the
-  notes by hand.
-- **Accord weights are not always available.** Only some sources publish them; without
-  them the world is chosen from note specificity alone, which is a weaker signal.
