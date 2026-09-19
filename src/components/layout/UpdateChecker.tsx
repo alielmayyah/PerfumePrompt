@@ -90,7 +90,7 @@ export function UpdateChecker() {
 
   const handlePullAndRebuild = async () => {
     setPulling(true);
-    setPullStatus('Pulling latest commits from GitHub and updating...');
+    setPullStatus('Downloading and extracting latest update from GitHub...');
     try {
       const res = await fetch('/api/system/update/pull', { method: 'POST' });
       const data = (await res.json()) as { success?: boolean; error?: string; newCommit?: string };
@@ -290,7 +290,7 @@ export function UpdateChecker() {
             disabled={pulling}
             className="w-full sm:w-auto font-medium"
           >
-            {pulling ? 'Updating...' : '⚡ Pull & Rebuild Now'}
+            {pulling ? 'Updating...' : '⚡ Auto Update & Extract Now'}
           </Button>
         </div>
       </div>
