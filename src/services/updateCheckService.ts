@@ -146,6 +146,53 @@ export async function getRemoteCommit(): Promise<{
 }
 
 /**
+ * Accurately determines if local commit is strictly behind remote commit.
+ * Uses `git merge-base --is-ancestor` to prevent false alarms when local is ahead.
+ */
+export async function isLocalBehindRemote(localSha: string, remoteSha: string): Promise<boolean> {
+  if (localSha.toLowerCase() === remoteSha.toLowerCase()) {
+    return false;
+  }
+
+  try {
+    // Check if local is ancestor of remote (remote is ahead of local)
+    await execFileAsync('git', ['merge-base', '--is-ancestor', localSha, remoteSha], {
+      timeout: 3000,
+      cwd: process.cwd(),
+    });
+    return true;
+  } catch {
+    // local is not an ancestor of remote
+  }
+
+  try {
+    // Check if remote is ancestor of local (local is ahead of remote)
+    await execFileAsync('git', ['merge-base', '--is-ancestor', remoteSha, localSha], {
+      timeout: 3000,
+      cwd: process.cwd(),
+    });
+    return false;
+  } catch {
+    // Remote commit not present in local git database
+  }
+
+  // If remote is not known in local git repo, fetch origin/main and re-test
+  try {
+    await execFileAsync('git', ['fetch', 'origin', 'main', '--quiet'], {
+      timeout: 6000,
+      cwd: process.cwd(),
+    });
+    await execFileAsync('git', ['merge-base', '--is-ancestor', localSha, remoteSha], {
+      timeout: 3000,
+      cwd: process.cwd(),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Checks if local HEAD is up-to-date with remote main.
  */
 export async function checkUpdateStatus(options?: { force?: boolean }): Promise<UpdateCheckResult> {
@@ -171,13 +218,19 @@ export async function checkUpdateStatus(options?: { force?: boolean }): Promise<
     }
 
     const isMatch = local.toLowerCase() === remote.sha.toLowerCase();
+    let behind = false;
+
+    if (!isMatch) {
+      behind = await isLocalBehindRemote(local, remote.sha);
+    }
+
     const result: UpdateCheckResult = {
-      upToDate: isMatch,
+      upToDate: !behind,
       localCommit: local.slice(0, 7),
       remoteCommit: remote.sha.slice(0, 7),
       remoteMessage: remote.message,
       remoteDate: remote.date,
-      behind: !isMatch,
+      behind,
       checkedAt: new Date().toISOString(),
     };
 
@@ -192,6 +245,63 @@ export async function checkUpdateStatus(options?: { force?: boolean }): Promise<
       remoteCommit: null,
       behind: false,
       checkedAt: new Date().toISOString(),
+      error: msg,
+    };
+  }
+}
+
+/**
+ * Automatically pulls the latest commits from GitHub and rebuilds the portable edition and launcher.
+ */
+export async function pullAndRebuild(): Promise<{
+  success: boolean;
+  output: string;
+  newCommit: string | null;
+  error?: string;
+}> {
+  try {
+    log.info('Running git pull origin main...');
+    const { stdout: pullOut, stderr: pullErr } = await execFileAsync(
+      'git',
+      ['pull', 'origin', 'main'],
+      { timeout: 30000, cwd: process.cwd() },
+    );
+
+    const pullOutput = (pullOut + '\n' + pullErr).trim();
+    log.info('git pull finished', { pullOutput });
+
+    // Invalidate update check cache
+    cachedResult = null;
+
+    // Get new local commit
+    const newCommit = await getLocalCommit();
+
+    // Rebuild the portable package in the background or synchronously
+    log.info('Rebuilding portable package and exe...');
+    let packageOutput = '';
+    try {
+      const { stdout: pkgOut } = await execFileAsync(
+        'node',
+        ['scripts/package-portable.ts'],
+        { timeout: 60000, cwd: process.cwd() },
+      );
+      packageOutput = pkgOut.trim();
+    } catch (err) {
+      log.warn('Portable packaging threw during update', { err });
+    }
+
+    return {
+      success: true,
+      output: `${pullOutput}\n${packageOutput}`.trim(),
+      newCommit: newCommit ? newCommit.slice(0, 7) : null,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error during pull';
+    log.error('Failed to pull and rebuild', { err });
+    return {
+      success: false,
+      output: msg,
+      newCommit: null,
       error: msg,
     };
   }

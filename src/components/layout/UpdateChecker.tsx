@@ -21,6 +21,8 @@ const POLL_INTERVAL_MS = 60_000; // Check every 60 seconds
 export function UpdateChecker() {
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [checking, setChecking] = useState(false);
+  const [pulling, setPulling] = useState(false);
+  const [pullStatus, setPullStatus] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -83,6 +85,28 @@ export function UpdateChecker() {
       // Silent error
     } finally {
       setChecking(false);
+    }
+  };
+
+  const handlePullAndRebuild = async () => {
+    setPulling(true);
+    setPullStatus('Pulling latest commits from GitHub and updating...');
+    try {
+      const res = await fetch('/api/system/update/pull', { method: 'POST' });
+      const data = (await res.json()) as { success?: boolean; error?: string; newCommit?: string };
+
+      if (data.success) {
+        setPullStatus('✓ Update complete! Rebuilt successfully. Reloading page...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        setPullStatus(`Update failed: ${data.error || 'Check terminal'}`);
+        setPulling(false);
+      }
+    } catch {
+      setPullStatus('Could not contact update service. Please run git pull manually.');
+      setPulling(false);
     }
   };
 
@@ -175,7 +199,7 @@ export function UpdateChecker() {
           <p className="mt-2 text-sm leading-relaxed text-bone-300">
             A new version has been pushed to the remote repository. To avoid
             running an outdated version and ensure all features are in sync, please
-            pull the latest changes into your local repository.
+            update your local repository.
           </p>
         </div>
 
@@ -197,10 +221,17 @@ export function UpdateChecker() {
           )}
         </div>
 
-        {/* Action Command Box */}
+        {/* Status progress message */}
+        {pullStatus && (
+          <div className="mt-4 rounded-xl border border-gold-500/30 bg-ink-950 p-3 text-xs text-gold-300 animate-pulse">
+            {pullStatus}
+          </div>
+        )}
+
+        {/* Manual Command Box (Alternative) */}
         <div className="mt-5">
           <label className="block text-xs font-medium uppercase tracking-wider text-bone-400 mb-2">
-            Run this in your terminal:
+            Manual command:
           </label>
           <div className="flex items-center justify-between gap-2 rounded-xl border border-ink-750 bg-ink-950 px-3.5 py-2.5">
             <code className="text-sm font-mono text-gold-200 selection:bg-gold-500/30">
@@ -211,6 +242,7 @@ export function UpdateChecker() {
               variant="secondary"
               onClick={copyPullCommand}
               className="text-xs shrink-0"
+              disabled={pulling}
             >
               {copied ? '✓ Copied!' : 'Copy Command'}
             </Button>
@@ -222,7 +254,7 @@ export function UpdateChecker() {
               rel="noopener noreferrer"
               className="text-xs text-gold-300 hover:text-gold-200 underline underline-offset-2 transition"
             >
-              Or download the latest Portable Edition (.zip) &rarr;
+              Or download latest Portable Edition (.zip) &rarr;
             </a>
           </div>
         </div>
@@ -234,18 +266,31 @@ export function UpdateChecker() {
             size="sm"
             onClick={() => setDismissed(true)}
             className="w-full sm:w-auto"
+            disabled={pulling}
           >
             Remind me later
           </Button>
 
           <Button
-            variant="primary"
+            variant="secondary"
             size="sm"
             onClick={handleManualCheck}
             loading={checking}
+            disabled={pulling}
             className="w-full sm:w-auto"
           >
             {checking ? 'Checking...' : 'Check Again'}
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handlePullAndRebuild}
+            loading={pulling}
+            disabled={pulling}
+            className="w-full sm:w-auto font-medium"
+          >
+            {pulling ? 'Updating...' : '⚡ Pull & Rebuild Now'}
           </Button>
         </div>
       </div>
