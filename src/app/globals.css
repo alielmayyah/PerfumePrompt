@@ -1,34 +1,93 @@
 @import 'tailwindcss';
 
 /*
- * Perfume Campaign Studio — dark premium studio aesthetic.
+ * Perfume Campaign Studio — Adaptive Studio Aesthetic.
  *
- * The interface is deliberately quiet: near-black surfaces, one warm accent, thin
- * borders, generous whitespace. Product imagery is the only thing allowed to be
- * loud on the page.
+ * Dark mode: deep obsidian studio with warm gold accents.
+ * Light mode: luminous French atelier with alabaster paper & bronze accents.
  */
 
+:root,
+[data-theme='dark'],
+html.dark {
+  --color-scheme: dark;
+
+  --ink-950: #08070a;
+  --ink-900: #0c0b0f;
+  --ink-850: #111015;
+  --ink-800: #17161c;
+  --ink-700: #221f28;
+  --ink-600: #302c38;
+  --ink-500: #4a4455;
+
+  --bone-50: #f6f4f1;
+  --bone-200: #d8d3ca;
+  --bone-400: #a29a8e;
+  --bone-600: #6f6862;
+
+  --gold-300: #e7c989;
+  --gold-400: #d3ac66;
+  --gold-500: #b98f45;
+
+  --jade-400: #6bbf8a;
+  --amber-warn: #d9a548;
+  --rose-500: #d46b6b;
+
+  --alpha-grid-color: #1a1920;
+}
+
+[data-theme='light'],
+html.light {
+  --color-scheme: light;
+
+  /* Luminous warm atelier surfaces */
+  --ink-950: #f7f5f0;
+  --ink-900: #ede8de;
+  --ink-850: #ffffff;
+  --ink-800: #e3dccf;
+  --ink-700: #d2c8b8;
+  --ink-600: #b5a894;
+  --ink-500: #938570;
+
+  /* Rich high-contrast warm charcoal & espresso text */
+  --bone-50: #181512;
+  --bone-200: #3b3630;
+  --bone-400: #6e6457;
+  --bone-600: #9b9081;
+
+  /* Sophisticated bronze / warm gold */
+  --gold-300: #8c5d13;
+  --gold-400: #9f6c18;
+  --gold-500: #845610;
+
+  --jade-400: #1c7c42;
+  --amber-warn: #b47008;
+  --rose-500: #c23838;
+
+  --alpha-grid-color: #e5dfd3;
+}
+
 @theme {
-  --color-ink-950: #08070a;
-  --color-ink-900: #0c0b0f;
-  --color-ink-850: #111015;
-  --color-ink-800: #17161c;
-  --color-ink-700: #221f28;
-  --color-ink-600: #302c38;
-  --color-ink-500: #4a4455;
+  --color-ink-950: var(--ink-950);
+  --color-ink-900: var(--ink-900);
+  --color-ink-850: var(--ink-850);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
 
-  --color-bone-50: #f6f4f1;
-  --color-bone-200: #d8d3ca;
-  --color-bone-400: #a29a8e;
-  --color-bone-600: #6f6862;
+  --color-bone-50: var(--bone-50);
+  --color-bone-200: var(--bone-200);
+  --color-bone-400: var(--bone-400);
+  --color-bone-600: var(--bone-600);
 
-  --color-gold-300: #e7c989;
-  --color-gold-400: #d3ac66;
-  --color-gold-500: #b98f45;
+  --color-gold-300: var(--gold-300);
+  --color-gold-400: var(--gold-400);
+  --color-gold-500: var(--gold-500);
 
-  --color-jade-400: #6bbf8a;
-  --color-amber-warn: #d9a548;
-  --color-rose-500: #d46b6b;
+  --color-jade-400: var(--jade-400);
+  --color-amber-warn: var(--amber-warn);
+  --color-rose-500: var(--rose-500);
 
   /* The --font-* variables are injected by next/font in the root layout. */
   --font-display: var(--font-cormorant), 'Cormorant Garamond', 'Times New Roman', serif;
@@ -43,11 +102,17 @@
     color-scheme: dark;
   }
 
+  html.light,
+  [data-theme='light'] {
+    color-scheme: light;
+  }
+
   body {
     background-color: var(--color-ink-950);
     color: var(--color-bone-50);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   ::selection {
@@ -72,6 +137,12 @@
     background-color: var(--color-ink-850);
     border: 1px solid var(--color-ink-700);
     border-radius: var(--radius-card);
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  html.light .studio-card,
+  [data-theme='light'] .studio-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(24, 21, 18, 0.03);
   }
 
   .studio-label {
@@ -89,10 +160,10 @@
   /* Checkerboard behind transparent PNGs so bottle cut-outs read correctly. */
   .studio-alpha-grid {
     background-image:
-      linear-gradient(45deg, #1a1920 25%, transparent 25%),
-      linear-gradient(-45deg, #1a1920 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #1a1920 75%),
-      linear-gradient(-45deg, transparent 75%, #1a1920 75%);
+      linear-gradient(45deg, var(--alpha-grid-color) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--alpha-grid-color) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--alpha-grid-color) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--alpha-grid-color) 75%);
     background-size: 16px 16px;
     background-position:
       0 0,
