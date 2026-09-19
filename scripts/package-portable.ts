@@ -23,6 +23,8 @@ async function main() {
   // Ensure no git metadata, local data, or env files are bundled into the portable release
   const gitInDist = path.resolve(distDir, '.git');
   if (existsSync(gitInDist)) await rm(gitInDist, { recursive: true, force: true });
+  const githubInDist = path.resolve(distDir, '.github');
+  if (existsSync(githubInDist)) await rm(githubInDist, { recursive: true, force: true });
   const dataInDist = path.resolve(distDir, '.data');
   if (existsSync(dataInDist)) await rm(dataInDist, { recursive: true, force: true });
 
@@ -50,7 +52,26 @@ async function main() {
     console.warn('   ⚠️ Warning: node.exe not found at default location.');
   }
 
-  console.log('7. Creating start.bat and README.txt...');
+  console.log('7. Compiling native Windows launcher (PerfumePrompt.exe)...');
+  const launcherSource = path.resolve(rootDir, 'scripts', 'launcher', 'PerfumePrompt.cs');
+  const targetExe = path.resolve(distDir, 'PerfumePrompt.exe');
+  const cscPaths = [
+    'C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe',
+    'C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe',
+  ];
+  const csc = cscPaths.find(existsSync);
+  if (csc && existsSync(launcherSource)) {
+    try {
+      execSync(`"${csc}" /target:exe /out:"${targetExe}" "${launcherSource}"`, { stdio: 'ignore' });
+      console.log('   ✓ Compiled native PerfumePrompt.exe');
+    } catch (err) {
+      console.warn('   ⚠️ Failed to compile PerfumePrompt.exe:', err);
+    }
+  } else {
+    console.warn('   ⚠️ csc.exe or launcher source not found, skipping .exe compilation');
+  }
+
+  console.log('8. Creating start.bat and README.txt...');
   const startBat = `@echo off
 title Perfume Prompt Preparer
 echo ========================================================
@@ -72,9 +93,9 @@ pause
 ==========================================
 
 HOW TO RUN:
-1. Double-click "start.bat"
+1. Double-click "PerfumePrompt.exe" (or "start.bat")
 2. Your browser will automatically open to http://localhost:3000
-3. Keep the black terminal window open while using the app.
+3. Keep the terminal window open while using the app.
 
 NO INSTALLATION REQUIRED:
 - No Node.js installation needed (bundled in bin/node.exe).
@@ -82,11 +103,11 @@ NO INSTALLATION REQUIRED:
 - Runs completely standalone on Windows.
 
 TO STOP:
-- Simply close the terminal window.
+- Simply close the window.
 `;
   await writeFile(path.resolve(distDir, 'README.txt'), readme, 'utf8');
 
-  console.log('8. Creating portable ZIP archive...');
+  console.log('9. Creating portable ZIP archive...');
   const zipPath = path.resolve(rootDir, 'dist', 'PerfumePrompt-Portable.zip');
   if (existsSync(zipPath)) {
     await rm(zipPath, { force: true });
@@ -99,6 +120,7 @@ TO STOP:
   console.log('\n======================================================');
   console.log('🎉 Portable package created successfully!');
   console.log(`Folder:  ${distDir}`);
+  console.log(`EXE:     ${targetExe}`);
   console.log(`ZIP:     ${zipPath}`);
   console.log('======================================================\n');
 }

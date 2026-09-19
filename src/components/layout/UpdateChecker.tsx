@@ -215,6 +215,16 @@ export function UpdateChecker() {
               {copied ? '✓ Copied!' : 'Copy Command'}
             </Button>
           </div>
+          <div className="mt-2.5 text-right">
+            <a
+              href="https://github.com/alielmayyah/PerfumePrompt/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gold-300 hover:text-gold-200 underline underline-offset-2 transition"
+            >
+              Or download the latest Portable Edition (.zip) &rarr;
+            </a>
+          </div>
         </div>
 
         {/* Action Buttons */}

@@ -7,7 +7,7 @@ import coreWebVitals from 'eslint-config-next/core-web-vitals';
 const typescriptPlugins = next.find((entry) => entry.plugins?.['@typescript-eslint'])?.plugins ?? {};
 
 const config = [
-  { ignores: ['.next/**', 'node_modules/**', '.data/**', 'public/**'] },
+  { ignores: ['.next/**', 'node_modules/**', '.data/**', 'public/**', 'dist/**'] },
   ...next,
   ...coreWebVitals,
   {
