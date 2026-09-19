@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { NavLinks } from './NavLinks';
+import { UpdateChecker } from './UpdateChecker';
 
 /**
  * Application chrome: a quiet sidebar on desktop, a horizontal rail on mobile.
@@ -11,6 +12,7 @@ import { NavLinks } from './NavLinks';
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh lg:flex">
+      <UpdateChecker />
       <header
         className="sticky top-0 z-20 border-b border-ink-800 bg-ink-950/95 backdrop-blur
                    lg:h-dvh lg:w-60 lg:shrink-0 lg:border-r lg:border-b-0"
