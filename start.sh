@@ -8,7 +8,18 @@ echo "  Perfume Prompt Preparer"
 echo "========================================================"
 echo ""
 
-# Check if Node.js is installed
+# 1. Automatically pull latest updates from GitHub if inside a git clone
+if [ -d ".git" ] && command -v git >/dev/null 2>&1; then
+    echo "[1/3] Checking for latest updates from GitHub..."
+    if git pull --quiet origin main 2>/dev/null; then
+        echo "  ✓ Up to date with latest GitHub version!"
+    else
+        echo "  ⚠️ Offline or remote unreachable. Continuing with local version..."
+    fi
+    echo ""
+fi
+
+# 2. Check if Node.js is installed
 if ! command -v node >/dev/null 2>&1; then
     echo "[Error] Node.js is not installed on this system."
     echo "Please install Node.js (v20+ recommended) via your package manager:"
@@ -20,13 +31,14 @@ if ! command -v node >/dev/null 2>&1; then
     exit 1
 fi
 
-# Install dependencies if node_modules is missing
+# 3. Install dependencies if node_modules is missing
 if [ ! -d "node_modules" ]; then
-    echo "First-time setup: installing dependencies..."
+    echo "[2/3] First-time setup: installing dependencies..."
     npm install
+    echo ""
 fi
 
-echo "Starting application on http://localhost:3000..."
+echo "[3/3] Starting application on http://localhost:3000..."
 
 # Open browser in background based on OS
 if command -v xdg-open >/dev/null 2>&1; then

@@ -90,6 +90,11 @@ echo ========================================================
 echo   Perfume Prompt Preparer - Portable Edition
 echo ========================================================
 echo.
+if exist "PerfumePrompt.exe" (
+    echo Checking for updates and starting PerfumePrompt...
+    start PerfumePrompt.exe
+    exit /b 0
+)
 echo Starting local server...
 start http://localhost:3000
 echo.
