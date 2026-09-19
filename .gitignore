@@ -16,10 +16,13 @@ next-env.d.ts
 .data/
 public/uploads/
 
+# local perfumes
+perfumes.local.json
+perfumes*.local.json
+
 # saved prompts: keep the folder and its README, ignore the files
 exports/*
 !exports/README.md
-
 
 # stray dev-server pid files
 .pid*.tmp

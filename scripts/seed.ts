@@ -20,6 +20,7 @@
  * regenerate or edit it freely.
  */
 
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -51,12 +52,15 @@ interface PerfumeSummary {
 const baseUrl = (process.env['STUDIO_SEED_URL'] ?? 'http://localhost:3000').replace(/\/$/, '');
 
 async function main(): Promise<void> {
-  const file = path.resolve(process.cwd(), 'perfumes.json');
+  const localFile = path.resolve(process.cwd(), 'perfumes.local.json');
+  const defaultFile = path.resolve(process.cwd(), 'perfumes.json');
+  const file = existsSync(localFile) ? localFile : defaultFile;
+  const fileName = path.basename(file);
   const parsed = JSON.parse(await readFile(file, 'utf8')) as { perfumes?: SeedEntry[] };
   const entries = parsed.perfumes ?? [];
 
   if (entries.length === 0) {
-    console.log('perfumes.json contains no entries. Nothing to seed.');
+    console.log(`${fileName} contains no entries. Nothing to seed.`);
     return;
   }
 
