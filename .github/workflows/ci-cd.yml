@@ -81,16 +81,20 @@ jobs:
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
           name: Perfume Prompt Preparer ${{ steps.vars.outputs.tag }}
-          files: dist/PerfumePrompt-Portable.zip
+          files: |
+            dist/PerfumePrompt.exe
+            dist/PerfumePrompt-Portable.zip
           draft: false
           prerelease: false
           generate_release_notes: true
           body: |
-            ### Perfume Prompt Preparer - Portable Windows Edition (.exe)
+            ### Perfume Prompt Preparer - Windows Desktop Edition
 
-            #### How to run:
+            #### Option A: Single-File Self-Updating Launcher (Recommended)
+            1. Download **`PerfumePrompt.exe`**.
+            2. Double-click it. It automatically downloads the latest release, keeps itself updated on every run, and opens `http://localhost:3000`.
+            *No manual extraction or unzipping required.*
+
+            #### Option B: Offline Portable Package
             1. Download and extract **`PerfumePrompt-Portable.zip`**.
-            2. Double-click **`PerfumePrompt.exe`** (or `start.bat`).
-            3. The server starts immediately and opens `http://localhost:3000` in your default browser.
-
-            *No installation of Node.js, Git, or external dependencies required.*
+            2. Double-click **`PerfumePrompt.exe`** (or `start.bat`) inside the folder.

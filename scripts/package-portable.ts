@@ -55,6 +55,7 @@ async function main() {
   console.log('7. Compiling native Windows launcher (PerfumePrompt.exe)...');
   const launcherSource = path.resolve(rootDir, 'scripts', 'launcher', 'PerfumePrompt.cs');
   const targetExe = path.resolve(distDir, 'PerfumePrompt.exe');
+  const standaloneExe = path.resolve(rootDir, 'dist', 'PerfumePrompt.exe');
   const cscPaths = [
     'C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe',
     'C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe',
@@ -62,8 +63,10 @@ async function main() {
   const csc = cscPaths.find(existsSync);
   if (csc && existsSync(launcherSource)) {
     try {
-      execSync(`"${csc}" /target:exe /out:"${targetExe}" "${launcherSource}"`, { stdio: 'ignore' });
-      console.log('   ✓ Compiled native PerfumePrompt.exe');
+      const compileCmd = `"${csc}" /target:exe /reference:System.IO.Compression.FileSystem.dll /reference:System.IO.Compression.dll /out:"${targetExe}" "${launcherSource}"`;
+      execSync(compileCmd, { stdio: 'ignore' });
+      await cp(targetExe, standaloneExe);
+      console.log('   ✓ Compiled native self-updating PerfumePrompt.exe');
     } catch (err) {
       console.warn('   ⚠️ Failed to compile PerfumePrompt.exe:', err);
     }
