@@ -282,7 +282,7 @@ export async function pullAndRebuild(): Promise<{
     try {
       const { stdout: pkgOut } = await execFileAsync(
         'node',
-        ['scripts/package-portable.ts'],
+        ['scripts/package-portable.mjs'],
         { timeout: 60000, cwd: process.cwd() },
       );
       packageOutput = pkgOut.trim();

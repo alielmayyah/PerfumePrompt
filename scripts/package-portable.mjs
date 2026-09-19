@@ -44,10 +44,14 @@ async function main() {
   const binDir = path.resolve(distDir, 'bin');
   await mkdir(binDir, { recursive: true });
 
-  const nodeExeSrc = 'C:\\Program Files\\nodejs\\node.exe';
-  if (existsSync(nodeExeSrc)) {
+  const candidateNodes = [
+    process.execPath,
+    'C:\\Program Files\\nodejs\\node.exe',
+  ];
+  const nodeExeSrc = candidateNodes.find((p) => p && existsSync(p));
+  if (nodeExeSrc) {
     await cp(nodeExeSrc, path.resolve(binDir, 'node.exe'));
-    console.log('   ✓ Bundled node.exe');
+    console.log(`   ✓ Bundled node.exe from: ${nodeExeSrc}`);
   } else {
     console.warn('   ⚠️ Warning: node.exe not found at default location.');
   }
@@ -64,7 +68,7 @@ async function main() {
   if (csc && existsSync(launcherSource)) {
     try {
       const compileCmd = `"${csc}" /target:exe /reference:System.IO.Compression.FileSystem.dll /reference:System.IO.Compression.dll /out:"${targetExe}" "${launcherSource}"`;
-      execSync(compileCmd, { stdio: 'ignore' });
+      execSync(compileCmd, { stdio: 'inherit' });
       await cp(targetExe, standaloneExe);
       console.log('   ✓ Compiled native self-updating PerfumePrompt.exe');
     } catch (err) {
